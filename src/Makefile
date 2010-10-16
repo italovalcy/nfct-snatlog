@@ -4,7 +4,7 @@ CCFLAGS=-Wall
 all: nfct-snatlog
 
 nfct-snatlog: nfct-snatlog.o
-	$(CC) $^ -o $@
+	$(CC) $^ -o $@ `pkg-config --cflags --libs libnetfilter_conntrack`
 
 .c.o:
 	$(CC) $(CCFLAGS) $< -c -o $@
