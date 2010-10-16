@@ -53,7 +53,7 @@ static int event_cb(enum nf_conntrack_msg_type type,
       default:
          break;
    }
-   //printf(" id=%u\n",ct->id);
+   printf(" id=%u\n",nfct_get_attr_u32(ct,ATTR_ID));
    printf("\n");
 
    return NFCT_CB_CONTINUE;
@@ -61,12 +61,12 @@ static int event_cb(enum nf_conntrack_msg_type type,
 
 static void event_sighandler(int s) {
    nfct_close(cth);
+   fprintf(stderr, "%s :: finishing...\n",PROGNAME);
    exit(EXIT_SUCCESS);
 }
 
-void exit_error(enum exittype status, const char *msg) {
-   fprintf(stderr,"[ERROR] %s :: %s\n",PROGNAME, msg);
-   exit(status);
+void print_error(const char *msg, int errnum) {
+   fprintf(stderr,"[ERROR] %s :: %s (%s)\n",PROGNAME, msg, strerror(errnum));
 }
 
 int main(int argc, char *argv[]) {
@@ -74,8 +74,10 @@ int main(int argc, char *argv[]) {
    cth = nfct_open(CONNTRACK,
          NF_NETLINK_CONNTRACK_NEW|NF_NETLINK_CONNTRACK_DESTROY);
    
-   if (!cth)
-		exit_error(OTHER_PROBLEM, "Can't open handler");
+   if (!cth) {
+      print_error("Can't open a ctnetlink handler", errno);
+      exit(EXIT_FAILURE);
+   }
 
    signal(SIGINT, event_sighandler);
 	signal(SIGTERM, event_sighandler);
