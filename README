@@ -1,0 +1,14 @@
+Netfilter conntrack SNAT Logging - nfct_snatlog
+-------------------------------------------------------------
+
+nfct_snatlog is a command line tool to logging SNAT translations using 
+netfilter connection tracking library. It gives the following information about
+a source NAT connection:
+ - Original L3 address (IP)
+ - Original L4 address (TCP/UDP Port)
+ - Translated L3 address (IP)
+ - Translated L4 address (TCP/UDP Port)
+ - Lifetime of the connection
+
+This kind of information is very useful to identify hosts of the intranet that
+generate a security incident.
