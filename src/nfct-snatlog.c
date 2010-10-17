@@ -80,7 +80,7 @@ static int event_cb(enum nf_conntrack_msg_type type,
                .s_addr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST)};
             printf("End of a SNAT connection: Original_Src: %s/%u "
                   "Translated_Src: %s/%u "
-                  "Lifetime: %ld seconds",
+                  "Lifetime: %ld seconds\n",
                   inet_ntoa(orig_src),
                   ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC)),
                   inet_ntoa(trans_src),
@@ -92,6 +92,8 @@ static int event_cb(enum nf_conntrack_msg_type type,
       default:
          break;
    }
+
+   fflush(stdout);
 
    return NFCT_CB_CONTINUE;
 }
