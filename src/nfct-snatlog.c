@@ -33,9 +33,14 @@
 
 #define PROGNAME "nfct-snatlog"
 
+// length("%Y-%m-%d %H:%M:%S %z") = 25
+#define LENGTH_ASCTIME 25
+
 #define proto_str(u8_proto) (u8_proto==IPPROTO_TCP) ? "tcp" : "udp"
 
 static struct nfct_handle *cth;
+
+static int debug = 1;
 
 struct conntrack_list *ct_list = NULL;
 
@@ -48,7 +53,9 @@ static int event_cb(enum nf_conntrack_msg_type type,
 		    struct nf_conntrack *ct,
 		    void *data) {
    struct conntrack_list *no;
+   char str_time[LENGTH_ASCTIME+1];
    u_int8_t l4proto;
+   time_t now = time(NULL);
 
    // we are interested only in SNAT connections
    if (!nfct_getobjopt(ct, NFCT_GOPT_IS_SNAT))
@@ -59,19 +66,26 @@ static int event_cb(enum nf_conntrack_msg_type type,
    if (l4proto != IPPROTO_TCP && l4proto != IPPROTO_UDP)
       return NFCT_CB_CONTINUE;
 
-   printf("[%s] %s id=%u orig-src=%s orig-dst=%s orig-sport=%d orig-dport=%d "
-         "repl-src=%s repl-dst=%s repl-sport=%d repl-dport=%d\n",
-         (type==NFCT_T_NEW) ? "NEW" : "DESTROY",
-         proto_str(l4proto),
-         nfct_get_attr_u32(ct,ATTR_ID),
-         net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC)),
-         net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST)),
-         ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC)),
-         ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST)),
-         net2addr(nfct_get_attr_u32(ct,ATTR_REPL_IPV4_SRC)),
-         net2addr(nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST)),
-         ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC)),
-         ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST)));
+   strftime(str_time,LENGTH_ASCTIME,"%Y-%m-%d %H:%M:%S %z",localtime(&now));
+
+   if (debug) {
+      printf("%s %s [DEBUG] :: "
+            "%s %s id=%u "
+            "orig-src=%s orig-dst=%s orig-sport=%d orig-dport=%d "
+            "repl-src=%s repl-dst=%s repl-sport=%d repl-dport=%d\n",
+            str_time, PROGNAME,
+            (type==NFCT_T_NEW) ? "NEW" : "DESTROY",
+            proto_str(l4proto),
+            nfct_get_attr_u32(ct,ATTR_ID),
+            net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC)),
+            net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST)),
+            ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC)),
+            ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST)),
+            net2addr(nfct_get_attr_u32(ct,ATTR_REPL_IPV4_SRC)),
+            net2addr(nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST)),
+            ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC)),
+            ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST)));
+   }
 
    switch(type) {
       case NFCT_T_NEW:
@@ -79,7 +93,7 @@ static int event_cb(enum nf_conntrack_msg_type type,
          no->id = nfct_get_attr_u32(ct,ATTR_ID);
          no->orig_ipv4_src = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC);
          no->orig_port_src = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
-         no->timestamp = time(NULL);
+         no->timestamp = now;
          list_add(&ct_list, no);
          break;
       case NFCT_T_DESTROY:
