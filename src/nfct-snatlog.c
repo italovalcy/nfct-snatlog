@@ -25,7 +25,11 @@
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
+#include <arpa/inet.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+
+#include "list.h"
 
 #define PROGNAME "nfct-snatlog"
 
@@ -37,24 +41,57 @@ enum exittype {
 
 static struct nfct_handle *cth;
 
+struct conntrack_list *ct_list = NULL;
+
 static int event_cb(enum nf_conntrack_msg_type type,
 		    struct nf_conntrack *ct,
 		    void *data) {
+   struct conntrack_list *no;
+
+   // we are interested only in SNAT connections
    if (!nfct_getobjopt(ct, NFCT_GOPT_IS_SNAT))
+      return NFCT_CB_CONTINUE;
+
+   // We are interested only in TCP/UDP L4 protocols...
+   if (nfct_get_attr_u8(ct,ATTR_ORIG_L4PROTO) != IPPROTO_TCP &&
+         nfct_get_attr_u8(ct,ATTR_ORIG_L4PROTO) != IPPROTO_UDP)
       return NFCT_CB_CONTINUE;
 
    switch(type) {
       case NFCT_T_NEW:
-         printf("[NEW] ");
+         printf("[NEW] id=%u\n",nfct_get_attr_u32(ct,ATTR_ID));
+         no = (struct conntrack_list *)malloc(sizeof(struct conntrack_list));
+         no->id = nfct_get_attr_u32(ct,ATTR_ID);
+         no->orig_ipv4_src = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC);
+         no->orig_port_src = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
+         no->timestamp = time(NULL);
+         list_add(&ct_list, no);
          break;
       case NFCT_T_DESTROY:
-         printf("[DESTROY] ");
+         printf("[DESTROY] id=%u\n",nfct_get_attr_u32(ct,ATTR_ID));
+         no = list_find(ct_list,
+               nfct_get_attr_u32(ct,ATTR_ID),
+               nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC),
+               nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC));
+         if (no) {
+            struct in_addr orig_src = { 
+               .s_addr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC)};
+            struct in_addr trans_src = { 
+               .s_addr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST)};
+            printf("End of a SNAT connection: Original_Src: %s/%u "
+                  "Translated_Src: %s/%u "
+                  "Lifetime: %ld seconds",
+                  inet_ntoa(orig_src),
+                  ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC)),
+                  inet_ntoa(trans_src),
+                  ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST)),
+                  time(NULL) - no->timestamp);
+            list_del(&ct_list,no);
+         }
          break;
       default:
          break;
    }
-   printf(" id=%u\n",nfct_get_attr_u32(ct,ATTR_ID));
-   printf("\n");
 
    return NFCT_CB_CONTINUE;
 }
