@@ -91,11 +91,11 @@ int __snprintf_start_log(char *buf, unsigned int len, char *log_type) {
       ret = strftime(buf, len, "%Y-%m-%d %H:%M:%S %z", localtime(&now));
       BUFFER_SIZE(ret, size, len, offset);
 
-      ret = snprintf(buf+offset, len, " %s:", PROGNAME);
+      ret = snprintf(buf+offset, len, " %s: ", PROGNAME);
       BUFFER_SIZE(ret, size, len, offset);
    }
 
-   ret = snprintf(buf+offset, len, " [%s]", log_type);
+   ret = snprintf(buf+offset, len, "[%s]", log_type);
    BUFFER_SIZE(ret, size, len, offset);
 
    return size;
@@ -140,6 +140,14 @@ void print_snatlog(struct nf_conntrack *ct,
 
    ret = snprintf(buf+offset, len, " trans-sport=%d", 
          ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST)));
+   BUFFER_SIZE(ret, size, len, offset);
+
+   ret = snprintf(buf+offset, len, " dst=%s",
+         net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST)));
+   BUFFER_SIZE(ret, size, len, offset);
+
+   ret = snprintf(buf+offset, len, " dport=%d",
+         ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST)));
    BUFFER_SIZE(ret, size, len, offset);
 
    ret = snprintf(buf+offset, len, " duration=%.0lfs", 
