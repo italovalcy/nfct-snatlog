@@ -8,7 +8,7 @@ a source NAT connection:
  - Original L4 address (TCP/UDP Port)
  - Translated L3 address (IP)
  - Translated L4 address (TCP/UDP Port)
- - Lifetime of the connection
+ - Duration of the connection
 
 This kind of information is very useful to identify hosts of the intranet that
 generate a security incident.

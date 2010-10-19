@@ -1,0 +1,35 @@
+.TH NFCT-SNATLOG 8 "October, 2010" "NFCT-SNATLOG"
+.SH NAME
+nfct-snatlog - Netfilter Conntrack SNAT Logging Tool
+.SH SYNOPSIS
+.B nfct-snatlog
+.RB [ \-s | \-\-daemon ]
+.RB [ \-d | \-\-debug ]
+.RB [ \-l | \-\-facility \ FACILITY ]
+.RB [ \-h | \-\-help ]
+.SH DESCRIPTION
+.B nfct-snatlog 
+is a command line tool to logging SNAT translations using 
+netfilter connection tracking library. It gives the following information about
+a source NAT connection:
+   * Original L3 address (IP)
+   * Original L4 address (TCP/UDP Port)
+   * Translated L3 address (IP)
+   * Translated L4 address (TCP/UDP Port)
+   * Duration of the connection
+.SH OPTIONS
+.TP
+.BI \-s \| \-\-daemon
+Run as a daemon.
+.TP
+.BI \-d \| \-\-debug
+Print debug messages, such as events of connections (NEW and DESTROY 
+conntrack events).
+.TP
+.BI \-l \| \-\-facility FACILITY
+Selects  the  local user of the syslog(8) facility. Value can be LOCAL0, 
+through LOCAL7, as well as USER and DAEMON. The default is LOCAL4. However, 
+this option is only used when running in daemon mode (--daemon).
+.TP
+.BI \-h \| \-\-help
+Display a short help message.
