@@ -30,6 +30,7 @@
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <getopt.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include "list.h"
 
@@ -50,19 +51,27 @@ static struct nfct_handle *cth;
 
 static u_int8_t debug_flag = 0;
 static u_int8_t daemon_flag = 0;
-static int syslog_facility = LOG_LOCAL4;
 
 struct conntrack_list *ct_list = NULL;
 
 
 void usage() {
-   printf("Usage: %s [options]\n\n");
+   printf("Usage: %s [options]\n\n", PROGNAME);
    printf("Options:\n");
-   printf("  -s, --daemon\t\t\tRun %s as a daemon.\n");
+   printf("  -s, --daemon\t\t\tRun %s as a daemon.\n", PROGNAME);
    printf("  -d, --debug\t\t\tPrint debug messages.\n");
-   printf("  -f, --facility FACILITY\t\t\tSyslog facility (default: LOCAL4)\n");
+   printf("  -f, --facility FACILITY\t\tSyslog facility (default: LOCAL4)\n");
    printf("  -h, --help\t\t\tDisplay a short help messsage\n");
    printf("\nFor a more detailed information, see %s(8)\n", PROGNAME);
+}
+
+void write_msg(int priority, const char *msg) {
+   if (daemon_flag) {
+      syslog(priority, msg);
+   } else {
+      fprintf(priority == LOG_ERR ? stderr : stdout ,"%s\n",msg);
+      fflush( priority == LOG_ERR ? stderr : stdout);
+   }
 }
 
 char * net2addr(u_int32_t u32_addr) {
@@ -82,7 +91,7 @@ int __snprintf_start_log(char *buf, unsigned int len, char *log_type) {
       ret = strftime(buf, len, "%Y-%m-%d %H:%M:%S %z", localtime(&now));
       BUFFER_SIZE(ret, size, len, offset);
 
-      ret = snprintf(buf+offset, len, " %s: ", PROGNAME, log_type);
+      ret = snprintf(buf+offset, len, " %s:", PROGNAME);
       BUFFER_SIZE(ret, size, len, offset);
    }
 
@@ -139,8 +148,7 @@ void print_snatlog(struct nf_conntrack *ct,
 
    buf[size+1 > len ? len-1 : size] = '\0';
 
-   printf("%s\n",buf);
-   fflush(stdout);
+   write_msg(LOG_INFO, buf);
 }
 
 void print_debug(struct nf_conntrack *ct, 
@@ -204,8 +212,7 @@ void print_debug(struct nf_conntrack *ct,
 
    buf[size+1 > len ? len-1 : size] = '\0';
 
-   printf("%s\n",buf);
-   fflush(stdout);
+   write_msg(LOG_INFO, buf);
 }
 
 static int event_cb(enum nf_conntrack_msg_type type,
@@ -255,25 +262,16 @@ static int event_cb(enum nf_conntrack_msg_type type,
 
 static void event_sighandler(int s) {
    nfct_close(cth);
-   printf("%s :: finishing...\n",PROGNAME);
+   write_msg(LOG_INFO, PROGNAME " exiting...");
    exit(EXIT_SUCCESS);
 }
 
-void print_error(const char *msg) {
-   fprintf(stderr,"[ERROR] %s :: %s (%s)\n",PROGNAME, msg, strerror(errnum));
-}
-
-void print_out(const char *msg) {
-   if (daemon_flag) {
-      syslog(LOG_INFO, msg);
-   } else {
-      printf("%s\n",msg);
-      fflush(stdout);
-   }
-}
 
 int main(int argc, char *argv[]) {
-   int c;
+   pid_t pid, sid;
+   int c, ret;
+   char buf[BUF_LEN];
+   int syslog_facility = LOG_LOCAL4;
 
    while (1) {
       static struct option long_options[] = {
@@ -306,22 +304,65 @@ int main(int argc, char *argv[]) {
          case 'f':
             syslog_facility = __str2facility(optarg);
             if (syslog_facility == -1) {
-               errno = EINVAL;   
-               fprintf(stderr, "Invalid syslog facility: %s\n", 
-                     optarg, PROGNAME);
+               ret = snprintf(buf,BUF_LEN-1,
+                     "Invalid syslog facility parameter: %s", optarg);
+               buf[ret] = '\0';
+               write_msg(LOG_ERR,buf);
                usage();
                exit(EXIT_FAILURE);
             }
-
+            break;
+         case '?':
+         default:
+            usage();
+            exit(EXIT_FAILURE);
+            break;
       }
 
+   }
+ 
+   if (daemon_flag) {
+       setlogmask(LOG_UPTO(LOG_INFO));
+       openlog(PROGNAME, LOG_CONS, syslog_facility);
+
+       /* Fork off the parent process */
+       pid = fork();
+       if (pid < 0) {
+           exit(EXIT_FAILURE);
+       }
+       /* If we got a good PID, then
+          we can exit the parent process. */
+       if (pid > 0) {
+           exit(EXIT_SUCCESS);
+       }
+
+       /* Create a new SID for the child process */
+       sid = setsid();
+       if (sid < 0) {
+           /* Log the failure */
+           exit(EXIT_FAILURE);
+       }
+
+       /* Change the current working directory */
+       if ((chdir("/")) < 0) {
+           /* Log the failure */
+           exit(EXIT_FAILURE);
+       }
+
+       /* Close out the standard file descriptors */
+       close(STDIN_FILENO);
+       close(STDOUT_FILENO);
+       close(STDERR_FILENO);
    }
 
    cth = nfct_open(CONNTRACK,
          NF_NETLINK_CONNTRACK_NEW|NF_NETLINK_CONNTRACK_DESTROY);
    
    if (!cth) {
-      print_error("Can't open a ctnetlink handler", errno);
+      ret = snprintf(buf, BUF_LEN-1, "Can't open a ctnetlink handler (%s)", 
+            strerror(errno));
+      buf[ret] = '\0';
+      write_msg(LOG_ERR, buf);
       exit(EXIT_FAILURE);
    }
 
@@ -331,7 +372,10 @@ int main(int argc, char *argv[]) {
    nfct_callback_register(cth, NFCT_T_NEW|NFCT_T_DESTROY, event_cb, NULL);
 
    if (nfct_catch(cth) == -1) {
-      fprintf(stderr, "ERROR: %s\n", strerror(errno));
+      ret = snprintf(buf, BUF_LEN-1, "Can't catch events (%s)", 
+            strerror(errno));
+      buf[ret] = '\0';
+      write_msg(LOG_ERR, buf);
    }
 
    nfct_close(cth);
