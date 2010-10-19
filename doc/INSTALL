@@ -1,0 +1,44 @@
+(C) 2010 by Italo Valcy <italo@dcc.ufba.br>
+
+
+Introduction
+============
+
+nfct-snatlog package contains a command line interface to logging SNAT 
+connections in a GNU/Linux firewall system.
+
+
+Requirements
+============
+
+You need the following libraries to get nfct-snatlog work:
+
+ - linux kernel version >= 2.6.18 (http://www.kernel.org) with CONNTRACK and 
+ NETFILTER options.
+
+ - libnfnetlink: the netfilter netlink library available at:
+
+   <http://www.netfilter.org/projects/libnfnetlink/files/>
+
+ - libnetfilter_conntrack: the netfilter conntrack library available at:
+
+   <http://www.netfilter.org/projects/libnetfilter_conntrack/files/>
+
+
+Compilation and Installation
+============================
+
+Just run the following commands (and solve the problems! ;)):
+
+   ./configure --prefix=/usr
+   make
+   make install
+
+
+How make to use
+===============
+
+nfct-snatlog can run as a daemon or a common batch application. When you run
+nfct-snatlog as a daemon, it writes messages to syslog (configurable facility),
+when you use as a batch application, it writes messages to standard output.
+For a detailed information, see nfct-snatlog(8).
