@@ -28,17 +28,28 @@ You need the following libraries to get nfct-snatlog work:
 Compilation and Installation
 ============================
 
-Just run the following commands (and solve the problems! ;)):
+Once you have installed the requirements, just run the following commands:
 
-   ./configure --prefix=/usr
-   make
+   cd /path/to/nfct-snatlog-VERSION
+   make 
    make install
+
+To uninstall, run the following commands:
+
+   cd /path/to/nfct-snatlog-VERSION
+   make uninstall
+
+NOTE: If you have installed nfct-snatlog in a differente place, please
+remainder to tell that to make (DESTDIR=/path/to/install-dir).
 
 
 How make to use
 ===============
 
-nfct-snatlog can run as a daemon or a common batch application. When you run
-nfct-snatlog as a daemon, it writes messages to syslog (configurable facility),
-when you use as a batch application, it writes messages to standard output.
+In the IPTables/Netfilter firewall system, just run:
+   
+   nfct-snatlog --daemon
+
+and look at the logs (default to LOCAL4 facility) for the SNAT log messages.
+
 For a detailed information, see nfct-snatlog(8).

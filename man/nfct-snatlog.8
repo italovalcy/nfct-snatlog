@@ -17,6 +17,13 @@ a source NAT connection:
    * Translated L3 address (IP)
    * Translated L4 address (TCP/UDP Port)
    * Duration of the connection
+.PP
+.B nfct-snatlog
+can run as a daemon or a common batch application. When you run
+.B nfct-snatlog
+as a daemon, it writes messages to syslog (configurable facility),
+when you use as a batch application, it writes messages to standard output
+(see the "-s, --daemon" command option).
 .SH OPTIONS
 .TP
 .BI \-s \| \-\-daemon
