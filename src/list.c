@@ -16,13 +16,21 @@ void list_add(struct conntrack_list **head, struct conntrack_list *no) {
 }
 
 void list_del(struct conntrack_list **head, struct conntrack_list *no) {
-   if (*head && *head == no) {
-      free(*head);
-      *head = NULL;
+   if (!(*head) || !no) {
       return;
    }
+
    no->prev->next = no->next;
    no->next->prev = no->prev;
+
+   if (*head == no) {
+      if (no == no->next) {
+         *head = NULL;
+      } else {
+         *head = (*head)->next;
+      }
+   }
+
    free(no);
 }
 
