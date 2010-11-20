@@ -46,6 +46,9 @@ remainder to tell that to make (DESTDIR=/path/to/install-dir).
 How make to use
 ===============
 
+[NOTE] Make sure you have loaded the following kernel modules: 'nf_conntrack',
+       'nf_conntrack_ipv4' and 'nf_conntrack_netlink'.
+
 In the IPTables/Netfilter firewall system, just run:
    
    nfct-snatlog --daemon
