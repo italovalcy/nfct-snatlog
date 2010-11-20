@@ -60,7 +60,7 @@ void usage() {
    printf("Options:\n");
    printf("  -s, --daemon\t\t\tRun %s as a daemon.\n", PROGNAME);
    printf("  -d, --debug\t\t\tPrint debug messages.\n");
-   printf("  -f, --facility FACILITY\t\tSyslog facility (default: LOCAL4)\n");
+   printf("  -f, --facility FACILITY\tSyslog facility (default: LOCAL4)\n");
    printf("  -h, --help\t\t\tDisplay a short help messsage\n");
    printf("\nFor a more detailed information, see %s(8)\n", PROGNAME);
 }
@@ -69,8 +69,10 @@ void write_msg(int priority, const char *msg) {
    if (daemon_flag) {
       syslog(priority, msg);
    } else {
-      fprintf(priority == LOG_ERR ? stderr : stdout ,"%s\n",msg);
-      fflush( priority == LOG_ERR ? stderr : stdout);
+      printf("%s\n",msg);
+      fflush(stdout);
+      //fprintf(priority == LOG_ERR ? stderr : stdout ,"%s\n",msg);
+      //fflush( priority == LOG_ERR ? stderr : stdout);
    }
 }
 
@@ -126,28 +128,20 @@ void print_snatlog(struct nf_conntrack *ct,
    ret = snprintf(buf+offset, len, " proto=%s", proto_str);
    BUFFER_SIZE(ret, size, len, offset);
 
-   ret = snprintf(buf+offset, len, " orig-src=%s", 
+   ret = snprintf(buf+offset, len, " o-src=%s",
          net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC)));
    BUFFER_SIZE(ret, size, len, offset);
 
-   ret = snprintf(buf+offset, len, " orig-sport=%d", 
+   ret = snprintf(buf+offset, len, " o-spt=%d",
          ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC)));
    BUFFER_SIZE(ret, size, len, offset);
 
-   ret = snprintf(buf+offset, len, " trans-src=%s", 
+   ret = snprintf(buf+offset, len, " t-src=%s",
          net2addr(nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST)));
    BUFFER_SIZE(ret, size, len, offset);
 
-   ret = snprintf(buf+offset, len, " trans-sport=%d", 
+   ret = snprintf(buf+offset, len, " t-spt=%d",
          ntohs(nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST)));
-   BUFFER_SIZE(ret, size, len, offset);
-
-   ret = snprintf(buf+offset, len, " dst=%s",
-         net2addr(nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST)));
-   BUFFER_SIZE(ret, size, len, offset);
-
-   ret = snprintf(buf+offset, len, " dport=%d",
-         ntohs(nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST)));
    BUFFER_SIZE(ret, size, len, offset);
 
    ret = snprintf(buf+offset, len, " duration=%.0lfs", 
