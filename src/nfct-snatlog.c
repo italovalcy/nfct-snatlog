@@ -49,7 +49,7 @@
 
 static struct nfct_handle *cth;
 
-static u_int8_t debug_flag = 0;
+static u_int8_t verbose_flag = 0;
 static u_int8_t daemon_flag = 0;
 
 struct conntrack_list *ct_list = NULL;
@@ -58,8 +58,8 @@ struct conntrack_list *ct_list = NULL;
 void usage() {
    printf("Usage: %s [options]\n\n", PROGNAME);
    printf("Options:\n");
-   printf("  -s, --daemon\t\t\tRun %s as a daemon.\n", PROGNAME);
-   printf("  -d, --debug\t\t\tPrint debug messages.\n");
+   printf("  -d, --daemon\t\t\tRun %s as a daemon.\n", PROGNAME);
+   printf("  -v, --verbose\t\t\tPrint in verbose mode.\n");
    printf("  -f, --facility FACILITY\tSyslog facility (default: LOCAL4)\n");
    printf("  -h, --help\t\t\tDisplay a short help messsage\n");
    printf("\nFor a more detailed information, see %s(8)\n", PROGNAME);
@@ -153,7 +153,7 @@ void print_snatlog(struct nf_conntrack *ct,
    write_msg(LOG_INFO, buf);
 }
 
-void print_debug(struct nf_conntrack *ct, 
+void print_verbose(struct nf_conntrack *ct,
       enum nf_conntrack_msg_type type, char *proto_str) {
    int ret = 0, size = 0, offset = 0, len = BUF_LEN;
    char buf[BUF_LEN];
@@ -232,8 +232,8 @@ static int event_cb(enum nf_conntrack_msg_type type,
    if (l4proto != IPPROTO_TCP && l4proto != IPPROTO_UDP)
       return NFCT_CB_CONTINUE;
 
-   if (debug_flag) {
-      print_debug(ct, type, proto_str(l4proto));
+   if (verbose_flag) {
+      print_verbose(ct, type, proto_str(l4proto));
    }
 
    switch(type) {
@@ -278,8 +278,8 @@ int main(int argc, char *argv[]) {
    while (1) {
       static struct option long_options[] = {
          /* Flags */
-         {"debug",   no_argument,       0, 'd'},
-         {"daemon",  no_argument,       0, 's'},
+         {"verbose",   no_argument,       0, 'v'},
+         {"daemon",  no_argument,       0, 'd'},
          {"help",    no_argument,       0, 'h'},
          {"facility",required_argument, 0, 'f'},
          {0, 0, 0, 0}
@@ -287,16 +287,16 @@ int main(int argc, char *argv[]) {
       /* getopt_long stores the option index here. */
       int option_index = 0;
       
-      c = getopt_long (argc, argv, "dshf:",long_options, &option_index);
+      c = getopt_long (argc, argv, "vdhf:",long_options, &option_index);
 
       if (c == -1)
          break;
 
       switch(c) {
-         case 'd':
-            debug_flag = 1;
+         case 'v':
+            verbose_flag = 1;
             break;
-         case 's':
+         case 'd':
             daemon_flag = 1;
             break;
          case 'h':
